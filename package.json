@@ -8,10 +8,11 @@
     "start": "next start"
   },
   "dependencies": {
+    "@supabase/supabase-js": "latest",
+    "@vercel/speed-insights": "^1.2.0",
+    "axios": "latest",
     "next": "latest",
     "react": "latest",
-    "react-dom": "latest",
-    "@supabase/supabase-js": "latest",
-    "axios": "latest"
+    "react-dom": "latest"
   }
 }
