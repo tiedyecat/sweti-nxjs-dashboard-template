@@ -8,8 +8,6 @@
     "start": "next start"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.49.1",
-    "axios": "^1.8.4",
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
