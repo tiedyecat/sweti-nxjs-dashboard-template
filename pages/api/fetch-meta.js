@@ -9,6 +9,17 @@ const API_VERSION = "v18.0"; // Use latest stable version
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Custom Conversion IDs
+const CUSTOM_CONVERSIONS = {
+    "Physiq Sync Acquire Lead": "1622613281250394",
+    "Salem SA Sign Up": "1027367501757935",
+    "Physiq Website Form Submission": "626817764433411",
+    "Albany SA Sign Up": "1265364404968883",
+    "Lancaster SA Sign Up": "1225287008420651",
+    "Downtown SA Sign Up": "1726846851091598",
+    "Keizer SA Sign Up": "1303318323892874"
+};
+
 export default async function handler(req, res) {
     if (req.method !== 'GET') {
         return res.status(405).json({ error: "Only GET requests allowed" });
@@ -21,7 +32,7 @@ export default async function handler(req, res) {
             {
                 params: {
                     access_token: META_ACCESS_TOKEN,
-                    fields: "campaign_name,ad_name,impressions,reach,clicks,spend,ctr,cpc,cpm,actions",
+                    fields: "campaign_name,ad_name,impressions,reach,clicks,spend,ctr,cpc,cpm,actions,action_values",
                     level: "ad",
                     date_preset: "last_7d", // Adjust as needed
                 }
@@ -38,12 +49,20 @@ export default async function handler(req, res) {
             reach: parseInt(ad.reach) || 0,
             clicks: parseInt(ad.clicks) || 0,
             spend: parseFloat(ad.spend) || 0,
-            ctr: parseFloat(ad.ctr) || 0,  // ✅ Using Meta’s direct value
-            cpm: parseFloat(ad.cpm) || 0,  // ✅ Using Meta’s direct value
-            cpc: parseFloat(ad.cpc) || 0,  // ✅ Using Meta’s direct value
-            leads: ad.actions?.find(action => action.action_type === "lead")?.value || 0,
-            memberships: ad.actions?.find(action => action.action_type === "offsite_conversion.custom")?.value || 0,
-            roas: 0,  // Placeholder, needs revenue data
+            ctr: parseFloat(ad.ctr) || 0,  // ✅ Meta’s direct CTR value
+            cpm: parseFloat(ad.cpm) || 0,  // ✅ Meta’s direct CPM value
+            cpc: parseFloat(ad.cpc) || 0,  // ✅ Meta’s direct CPC value
+
+            // Extracting custom conversion values dynamically
+            leads: ad.actions?.find(action => action.action_type === CUSTOM_CONVERSIONS["Physiq Sync Acquire Lead"])?.value || 0,
+            salem_signups: ad.actions?.find(action => action.action_type === CUSTOM_CONVERSIONS["Salem SA Sign Up"])?.value || 0,
+            website_form_submissions: ad.actions?.find(action => action.action_type === CUSTOM_CONVERSIONS["Physiq Website Form Submission"])?.value || 0,
+            albany_signups: ad.actions?.find(action => action.action_type === CUSTOM_CONVERSIONS["Albany SA Sign Up"])?.value || 0,
+            lancaster_signups: ad.actions?.find(action => action.action_type === CUSTOM_CONVERSIONS["Lancaster SA Sign Up"])?.value || 0,
+            downtown_signups: ad.actions?.find(action => action.action_type === CUSTOM_CONVERSIONS["Downtown SA Sign Up"])?.value || 0,
+            keizer_signups: ad.actions?.find(action => action.action_type === CUSTOM_CONVERSIONS["Keizer SA Sign Up"])?.value || 0,
+
+            roas: 0,  // Placeholder for revenue-based tracking
             roi: 0,   // Placeholder
             date: new Date().toISOString().split("T")[0]
         }));
