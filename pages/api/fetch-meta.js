@@ -37,24 +37,28 @@ export default async function handler(req, res) {
     }
 
     // 🚀 Map and clean the data
-    const adsData = response.data.data.map(ad => ({
-  platform: "Meta",
-  campaign_name: ad.campaign_name || "Unknown",
-  ad_name: ad.ad_name || "Unknown",
-  location: null,
-  impressions: parseInt(ad.impressions) || 0,
-  reach: parseInt(ad.reach) || 0,
-  clicks: parseInt(ad.clicks) || 0,
-  spend: parseFloat(ad.spend) || 0,
-  ctr: parseFloat(ad.ctr) || 0,
-  cpm: parseFloat(ad.cpm) || 0,
-  cpc: parseFloat(ad.cpc) || 0,
-  leads: ad.actions?.find(a => a.action_type === "lead")?.value || 0,
-  purchases: ad.actions?.find(a => a.action_type === "offsite_conversion.custom")?.value || 0, // ✅ Now Added
-  roas: 0,
-  roi: 0,
-  date: new Date().toISOString().split("T")[0]
-}));
+    const adsData = response.data.data.map(ad => {
+      const purchasesValue = ad.actions?.find(a => a.action_type === "offsite_conversion.custom")?.value || 0;
+
+      return {
+        platform: "Meta",
+        campaign_name: ad.campaign_name || "Unknown",
+        ad_name: ad.ad_name || "Unknown",
+        location: null,
+        impressions: parseInt(ad.impressions) || 0,
+        reach: parseInt(ad.reach) || 0,
+        clicks: parseInt(ad.clicks) || 0,
+        spend: parseFloat(ad.spend) || 0,
+        ctr: parseFloat(ad.ctr) || 0,
+        cpm: parseFloat(ad.cpm) || 0,
+        cpc: parseFloat(ad.cpc) || 0,
+        leads: ad.actions?.find(a => a.action_type === "lead")?.value || 0,
+        ...(purchasesValue > 0 && { purchases: purchasesValue }), // ✅ Only include purchases if > 0
+        roas: 0,
+        roi: 0,
+        date: new Date().toISOString().split("T")[0]
+      };
+    });
 
     console.log("🧾 Cleaned Ads Data:", JSON.stringify(adsData, null, 2));
 
@@ -73,4 +77,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: error.message });
   }
 }
-
