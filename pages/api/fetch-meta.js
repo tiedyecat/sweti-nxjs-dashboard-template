@@ -34,7 +34,7 @@ export default async function handler(req, res) {
                     access_token: META_ACCESS_TOKEN,
                     fields: "campaign_name,ad_name,impressions,reach,clicks,spend,ctr,cpc,cpm,actions,action_values",
                     level: "ad",
-                    date_preset: "last_7d", // Adjust as needed
+                    date_preset: "last_7d",
                 }
             }
         );
@@ -49,32 +49,28 @@ export default async function handler(req, res) {
             reach: parseInt(ad.reach) || 0,
             clicks: parseInt(ad.clicks) || 0,
             spend: parseFloat(ad.spend) || 0,
-            ctr: parseFloat(ad.ctr) || 0,  // ✅ Meta’s direct CTR value
-            cpm: parseFloat(ad.cpm) || 0,  // ✅ Meta’s direct CPM value
-            cpc: parseFloat(ad.cpc) || 0,  // ✅ Meta’s direct CPC value
-
-            // Extracting custom conversion values dynamically
-            leads: ad.actions?.find(action => action.action_type === CUSTOM_CONVERSIONS["Physiq Sync Acquire Lead"])?.value || 0,
-            salem_signups: ad.actions?.find(action => action.action_type === CUSTOM_CONVERSIONS["Salem SA Sign Up"])?.value || 0,
-            website_form_submissions: ad.actions?.find(action => action.action_type === CUSTOM_CONVERSIONS["Physiq Website Form Submission"])?.value || 0,
-            albany_signups: ad.actions?.find(action => action.action_type === CUSTOM_CONVERSIONS["Albany SA Sign Up"])?.value || 0,
-            lancaster_signups: ad.actions?.find(action => action.action_type === CUSTOM_CONVERSIONS["Lancaster SA Sign Up"])?.value || 0,
-            downtown_signups: ad.actions?.find(action => action.action_type === CUSTOM_CONVERSIONS["Downtown SA Sign Up"])?.value || 0,
-            keizer_signups: ad.actions?.find(action => action.action_type === CUSTOM_CONVERSIONS["Keizer SA Sign Up"])?.value || 0,
-
-            roas: 0,  // Placeholder for revenue-based tracking
-            roi: 0,   // Placeholder
+            ctr: parseFloat(ad.ctr) || 0,
+            cpm: parseFloat(ad.cpm) || 0,
+            cpc: parseFloat(ad.cpc) || 0,
+            leads: ad.actions?.find(action => action.action_type === "lead")?.value || 0,
+            roas: 0,
+            roi: 0,
             date: new Date().toISOString().split("T")[0]
         }));
 
+        console.log("🚀 Cleaned Ads Data: ", JSON.stringify(adsData, null, 2));
+
         // 🚀 Insert data into Supabase
         const { data, error } = await supabase.from("ad_data").insert(adsData);
-        if (error) throw error;
+        if (error) {
+            console.error("❌ Supabase Insert Error: ", error);
+            return res.status(500).json({ error: error.message });
+        }
 
         return res.status(200).json({ message: "Meta data saved to Supabase!", data });
 
     } catch (error) {
-        console.error("Meta API Error:", error);
+        console.error("❌ Meta API Error: ", error);
         return res.status(500).json({ error: error.message });
     }
 }
