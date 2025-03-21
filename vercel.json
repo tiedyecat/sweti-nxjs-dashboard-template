@@ -1,7 +1,1 @@
-{
-  "functions": {
-    "api/users/**/*.jsapi/*.js": {
-      "maxDuration": 30
-    }
-  }
-}
+
