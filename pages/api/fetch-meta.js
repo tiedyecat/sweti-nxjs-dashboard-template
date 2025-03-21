@@ -37,23 +37,24 @@ export default async function handler(req, res) {
     }
 
     // 🚀 Process the Data
-    const adsData = insightsResponse.data.data.map(ad => {
-      const purchasesValue = ad.actions?.find(a => a.action_type === "purchase")?.value || 0;
-      const leadsValue = ad.actions?.find(a => a.action_type === "lead")?.value || 0;
+    const adsData = response.data.data.map(ad => {
+  const purchasesValue = ad.actions?.find(a => a.action_type === "purchase")?.value || 0;
+  const leadsValue = ad.actions?.find(a => a.action_type === "lead")?.value || 0;
 
-      return {
-        platform: "Meta",
-        ad_id: ad.ad_id || "Unknown",
-        date_range: `${ad.date_start} - ${ad.date_stop}`,
-        impressions: parseInt(ad.impressions) || 0,
-        reach: parseInt(ad.reach) || 0,
-        clicks: parseInt(ad.clicks) || 0,
-        spend: parseFloat(ad.spend) || 0,
-        ctr: parseFloat(ad.ctr) || 0,
-        ...(purchasesValue > 0 && { purchases: purchasesValue }), // ✅ Only include purchases if > 0
-        ...(leadsValue > 0 && { leads: leadsValue }), // ✅ Only include leads if > 0
-      };
-    });
+  return {
+    platform: "Meta",
+    ad_id: ad.ad_id || "Unknown",
+    date_range: `${ad.date_start} - ${ad.date_stop}`,
+    impressions: parseInt(ad.impressions) || 0,
+    reach: parseInt(ad.reach) || 0,
+    clicks: parseInt(ad.clicks) || 0,
+    spend: parseFloat(ad.spend) || 0,
+    ctr: parseFloat(ad.ctr) || 0,
+    ...(purchasesValue > 0 && { purchases: purchasesValue }), // ✅ Only include purchases if > 0
+    ...(leadsValue > 0 && { leads: leadsValue }) // ✅ Only include leads if > 0
+  };
+});
+
 
     console.log("🧾 Cleaned Ads Data:", JSON.stringify(adsData, null, 2));
 
