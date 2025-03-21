@@ -6,7 +6,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN;
 const AD_ACCOUNT_ID = process.env.AD_ACCOUNT_ID; // e.g., "act_1234567890"
-const API_VERSION = "v22.0"; // Updated to API version 22.0
+const API_VERSION = "v22.0"; // Using API version 22.0
 
 // 2. Initialize Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -49,12 +49,28 @@ export default async function handler(req, res) {
       return res.status(200).json({ message: "No ad data returned from Meta API.", data: [] });
     }
 
-    // 6. Process the Data: calculate CPL and CPP in addition to standard metrics
+    // 6. Process the Data with additional field checks
     const adsData = insightsResponse.data.data.map(ad => {
+      // Check for required fields and log if any are missing
+      if (!ad.ad_id) {
+        console.error("Missing ad_id for one of the insights:", ad);
+      }
+      if (!ad.date_start || !ad.date_stop) {
+        console.error("Missing date_start or date_stop for ad:", ad.ad_id);
+      }
+      if (!ad.impressions) {
+        console.warn("No impressions found for ad:", ad.ad_id);
+      }
+      if (!ad.spend) {
+        console.warn("No spend found for ad:", ad.ad_id);
+      }
+      
       const impressions = parseInt(ad.impressions) || 0;
       const clicks = parseInt(ad.clicks) || 0;
       const spend = parseFloat(ad.spend) || 0;
       const ctr = parseFloat(ad.ctr) || 0;
+      const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
+      const cpc = clicks > 0 ? spend / clicks : 0;
       
       // Standard events
       const leadsValue = ad.actions?.find(a => a.action_type === "lead")?.value || 0;
@@ -63,9 +79,7 @@ export default async function handler(req, res) {
       // Compute cost metrics safely
       const cpl = leadsValue > 0 ? spend / leadsValue : 0;
       const cpp = purchasesValue > 0 ? spend / purchasesValue : 0;
-      const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
-      const cpc = clicks > 0 ? spend / clicks : 0;
-
+      
       // Initialize custom conversion counts for each column as 0
       const customCounts = {};
       for (const [targetId, colName] of Object.entries(CUSTOM_CONVERSIONS)) {
@@ -81,7 +95,7 @@ export default async function handler(req, res) {
           customCounts[colName] += parseInt(action.value) || 0;
         }
       });
-
+      
       return {
         platform: "Meta",
         ad_id: ad.ad_id || "Unknown",
@@ -111,15 +125,14 @@ export default async function handler(req, res) {
       .select("*");
 
     if (error) {
-      console.error("❌ Supabase Insert Error:", error);
+      console.error("❌ Supabase Insert Error:", JSON.stringify(error, null, 2));
       return res.status(500).json({ error: error.message });
     }
 
     return res.status(200).json({ message: "Meta data saved to Supabase!", data });
   } catch (error) {
-    console.error("❌ Meta API Error:", error.message);
+    console.error("❌ Meta API Error:", JSON.stringify(error.response?.data || error.message, null, 2));
     return res.status(500).json({ error: error.message });
   }
 }
-
 
