@@ -37,7 +37,6 @@ export default async function handler(req, res) {
             reach: parseInt(ad.reach) || 0,
             clicks: parseInt(ad.clicks) || 0,
             spend: parseFloat(ad.spend) || 0,
-            ctr: ad.impressions > 0 ? (ad.clicks / ad.impressions) : 0,
             cpm: ad.impressions > 0 ? (ad.spend / ad.impressions) * 1000 : 0,
             cpc: ad.clicks > 0 ? (ad.spend / ad.clicks) : 0,
             leads: 0, // Placeholder (modify if tracking conversions)
