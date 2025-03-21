@@ -1,19 +1,22 @@
 // pages/api/getAdsetInsights.js
 
-import { createClient } from '@supabase/supabase-js';
-import axios from 'axios';
+export const config = {
+  runtime: 'edge', // 1) Tells Next.js to use the Edge Runtime
+};
 
-// 1. Environment variables
+import { createClient } from '@supabase/supabase-js';
+
+// 2) Environment variables
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN;
 const AD_ACCOUNT_ID = process.env.AD_ACCOUNT_ID; // e.g., "act_1234567890"
-const API_VERSION = "v22.0"; // If you truly need v22.0
+const API_VERSION = "v22.0"; // If you truly need "v22.0" by 2025
 
-// 2. Initialize Supabase client
+// 3) Initialize Supabase client
+//    Make sure you're on a supabase-js version that supports Edge
 let supabase;
 try {
-  // Check for missing environment variables before creating the client
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     throw new Error("Missing Supabase credentials (SUPABASE_URL or SUPABASE_KEY).");
   }
@@ -22,55 +25,60 @@ try {
   console.error("❌ Supabase Client Initialization Error:", err.message);
 }
 
-// Helper function to create error responses
-function errorResponse(res, message, status = 500) {
+/**
+ * Helper to create an error JSON response with an HTTP status.
+ * Usage: return errorResponse("Something went wrong", 400);
+ */
+function errorResponse(message, status = 500) {
   console.error("❌ Error:", message);
-  return res.status(status).json({ error: message });
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
-export default async function handler(req, res) {
-  // 3. Only allow GET requests
+export default async function handler(req) {
+  // 4) Only allow GET requests
   if (req.method !== 'GET') {
-    return errorResponse(res, "Only GET requests allowed", 405);
+    return errorResponse("Only GET requests allowed", 405);
   }
 
-  // 4. Check critical environment variables
+  // 5) Check critical environment variables
   if (!META_ACCESS_TOKEN || !AD_ACCOUNT_ID) {
-    return errorResponse(res, "Missing Meta environment variables (META_ACCESS_TOKEN or AD_ACCOUNT_ID).");
+    return errorResponse("Missing Meta environment variables (META_ACCESS_TOKEN or AD_ACCOUNT_ID).");
   }
 
-  try {
-    // 5. Fetch Meta Ad Set Insights Data
-    const metaUrl = `https://graph.facebook.com/${API_VERSION}/${AD_ACCOUNT_ID}/insights`;
-    const params = {
+  // 6) Construct the Meta Graph API URL
+  const metaUrl = `https://graph.facebook.com/${API_VERSION}/${AD_ACCOUNT_ID}/insights?` +
+    new URLSearchParams({
       access_token: META_ACCESS_TOKEN,
       fields: "date_start,date_stop,adset_id,adset_name,impressions,reach,clicks,ctr,spend,actions",
       level: "adset",
       date_preset: "last_30d",
-      time_increment: 1
-    };
+      time_increment: "1"
+    });
 
-    const insightsResponse = await axios.get(metaUrl, { params });
-
-    // 6. Check if Meta responded with a non-200 status
-    if (insightsResponse.status !== 200) {
-      return errorResponse(
-        res,
-        `Meta API returned non-200 status: ${insightsResponse.status}`,
-        insightsResponse.status
-      );
+  try {
+    // 7) Fetch from the Meta API
+    const metaRes = await fetch(metaUrl);
+    if (!metaRes.ok) {
+      return errorResponse(`Meta API returned non-200 status: ${metaRes.status}`, metaRes.status);
     }
 
-    console.log("📊 Raw Meta API Response:", JSON.stringify(insightsResponse.data, null, 2));
+    const insightsResponse = await metaRes.json();
+    console.log("📊 Raw Meta API Response:", insightsResponse);
 
-    // 7. Exit early if no data
-    if (!insightsResponse.data.data || insightsResponse.data.data.length === 0) {
+    // 8) Exit early if no data returned
+    if (!insightsResponse.data || insightsResponse.data.length === 0) {
       console.warn("⚠️ No ad set data returned from Meta API.");
-      return res.status(200).json({ message: "No ad set data returned from Meta API.", data: [] });
+      return new Response(JSON.stringify({ message: "No ad set data returned from Meta API.", data: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // 8. Process and clean the data
-    const adsetData = insightsResponse.data.data.map((adset) => {
+    // 9) Process and clean the data
+    const adsetData = insightsResponse.data.map((adset) => {
       if (!adset.adset_id) {
         console.error("❌ Missing adset_id for one of the insights:", adset);
       }
@@ -119,26 +127,26 @@ export default async function handler(req, res) {
       };
     });
 
-    console.log("🧾 Cleaned Ad Set Data:", JSON.stringify(adsetData, null, 2));
+    console.log("🧾 Cleaned Ad Set Data:", adsetData);
 
-    // 9. Upsert the data into the adset_data table using the composite unique key
+    // 10) Upsert the data into the adset_data table using a composite unique key
     const { data, error } = await supabase
       .from("adset_data")
       .upsert(adsetData, { onConflict: "adset_id,date_start,date_stop" })
       .select("*");
 
     if (error) {
-      return errorResponse(res, `Supabase Insert Error: ${error.message}`);
+      return errorResponse(`Supabase Insert Error: ${error.message}`);
     }
 
-    // 10. Return success response
-    return res.status(200).json({
-      message: "Ad set data saved to Supabase!",
-      data
+    // 11) Return success response
+    return new Response(JSON.stringify({ message: "Ad set data saved to Supabase!", data }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
     });
-  } catch (error) {
-    // 11. Catch any other unhandled errors
-    console.error("❌ Meta API Error:", error.response?.data || error.message);
-    return errorResponse(res, error.message);
+  } catch (err) {
+    console.error("❌ Meta API Error:", err);
+    return errorResponse(err.message);
   }
 }
+
