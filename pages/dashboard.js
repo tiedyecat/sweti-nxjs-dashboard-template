@@ -5,10 +5,10 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_KEY;
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
 export default function Dashboard() {
   const [data, setData] = useState([]);
@@ -65,3 +65,4 @@ export default function Dashboard() {
     </div>
   );
 }
+
