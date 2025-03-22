@@ -10,6 +10,9 @@ const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN;
 const AD_ACCOUNT_ID = process.env.AD_ACCOUNT_ID;
 const API_VERSION = "v22.0";
 
+const LIMIT = 20; // Very conservative to prevent timeouts
+const DATE_PRESET = "yesterday"; // Smallest possible range for testing
+
 let supabase;
 try {
   if (!SUPABASE_URL || !SUPABASE_KEY) throw new Error("Missing Supabase credentials.");
@@ -25,46 +28,48 @@ function errorResponse(message, status = 500) {
   });
 }
 
-// Fetch all ads with thumbnail URLs
 async function fetchAdsThumbnails() {
-  const adsUrl = `https://graph.facebook.com/${API_VERSION}/${AD_ACCOUNT_ID}/ads?` +
+  const thumbnails = {};
+  let url = `https://graph.facebook.com/${API_VERSION}/${AD_ACCOUNT_ID}/ads?` +
     new URLSearchParams({
       access_token: META_ACCESS_TOKEN,
       fields: "id,creative{thumbnail_url}",
-      limit: "500"
+      limit: LIMIT.toString()
     });
 
-  const adsResponse = await fetch(adsUrl);
-  const adsData = await adsResponse.json();
+  let fetchCount = 0;
+  while (url && fetchCount < 5) {  // safety limit: 5 batches (max 100 ads)
+    const res = await fetch(url);
+    const data = await res.json();
 
-  if (!adsResponse.ok) {
-    console.error("Ads API Error:", adsData);
-    throw new Error("Error fetching ads thumbnails");
+    if (!res.ok) {
+      console.error("Ads API Error:", data);
+      throw new Error("Error fetching ads thumbnails");
+    }
+
+    data.data.forEach(ad => {
+      thumbnails[ad.id] = ad.creative?.thumbnail_url || null;
+    });
+
+    url = data.paging?.next || null;
+    fetchCount++;
   }
-
-  const thumbnails = {};
-  adsData.data.forEach(ad => {
-    thumbnails[ad.id] = ad.creative?.thumbnail_url || null;
-  });
 
   return thumbnails;
 }
 
 export default async function handler(req) {
   if (req.method !== 'GET') return errorResponse("Only GET allowed", 405);
-
-  if (!META_ACCESS_TOKEN || !AD_ACCOUNT_ID) {
-    return errorResponse("Missing environment variables.");
-  }
+  if (!META_ACCESS_TOKEN || !AD_ACCOUNT_ID) return errorResponse("Missing env vars.");
 
   const insightsUrl = `https://graph.facebook.com/${API_VERSION}/${AD_ACCOUNT_ID}/insights?` +
     new URLSearchParams({
       access_token: META_ACCESS_TOKEN,
       fields: "date_start,date_stop,ad_id,ad_name,impressions,reach,clicks,ctr,spend,actions",
       level: "ad",
-      date_preset: "last_30d",
+      date_preset: DATE_PRESET,
       time_increment: "1",
-      limit: "500"
+      limit: LIMIT.toString()
     });
 
   try {
@@ -80,7 +85,6 @@ export default async function handler(req) {
       return new Response(JSON.stringify({ message: "No data returned.", data: [] }), { status: 200 });
     }
 
-    // Fetch thumbnails separately
     const thumbnails = await fetchAdsThumbnails();
 
     const adData = insightsData.data.map((ad) => {
@@ -122,7 +126,7 @@ export default async function handler(req) {
 
     if (error) return errorResponse(`Supabase Error: ${error.message}`);
 
-    return new Response(JSON.stringify({ message: "Insights & Thumbnails saved!" }), {
+    return new Response(JSON.stringify({ message: "Small-batch insights & thumbnails saved!" }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
