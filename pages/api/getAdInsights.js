@@ -10,8 +10,8 @@ const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN;
 const AD_ACCOUNT_ID = process.env.AD_ACCOUNT_ID;
 const API_VERSION = "v22.0";
 
-const LIMIT = 20; // Very conservative to prevent timeouts
-const DATE_PRESET = "yesterday"; // Smallest possible range for testing
+const LIMIT = 20; // Safe batch size to avoid timeout
+const DATE_PRESET = "last_7d"; // Increased date range to 7 days
 
 let supabase;
 try {
@@ -28,6 +28,7 @@ function errorResponse(message, status = 500) {
   });
 }
 
+// Fetch thumbnails with pagination (safe limit)
 async function fetchAdsThumbnails() {
   const thumbnails = {};
   let url = `https://graph.facebook.com/${API_VERSION}/${AD_ACCOUNT_ID}/ads?` +
@@ -38,7 +39,7 @@ async function fetchAdsThumbnails() {
     });
 
   let fetchCount = 0;
-  while (url && fetchCount < 5) {  // safety limit: 5 batches (max 100 ads)
+  while (url && fetchCount < 5) { // safety cap at 100 total ads
     const res = await fetch(url);
     const data = await res.json();
 
@@ -126,7 +127,7 @@ export default async function handler(req) {
 
     if (error) return errorResponse(`Supabase Error: ${error.message}`);
 
-    return new Response(JSON.stringify({ message: "Small-batch insights & thumbnails saved!" }), {
+    return new Response(JSON.stringify({ message: "7-day insights & thumbnails saved!" }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
