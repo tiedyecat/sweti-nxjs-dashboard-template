@@ -1,6 +1,10 @@
-// pages/_app.js
-import '../styles/globals.css'
+import { useEffect } from "react";
+import '../styles/globals.css';
 
 export default function App({ Component, pageProps }) {
-  return <Component {...pageProps} />
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
+
+  return <Component {...pageProps} />;
 }
