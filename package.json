@@ -11,9 +11,9 @@
     "@supabase/supabase-js": "latest",
     "@vercel/speed-insights": "^1.2.0",
     "axios": "latest",
-    "next": "latest",
-    "react": "latest",
-    "react-dom": "latest",
+    "next": "^15.2.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "recharts": "latest"
   },
   "devDependencies": {
