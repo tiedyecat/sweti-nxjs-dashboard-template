@@ -59,12 +59,11 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="bg-gray-900 text-white min-h-screen">
-      <div className="container mx-auto p-8">
         <div className="flex justify-between items-center mb-8">
           <Image src="/logo-sweti.png" width={200} height={60} alt="SWETI Marketing" />
           <Image src="/logo-physiq.png" width={200} height={60} alt="Physiq Fitness" />
         </div>
+
 
         <h1 className="text-3xl font-bold mb-6" style={{ color: '#97c848' }}>
           📊 Physiq Fitness Ad Performance (7 Days)
