@@ -2,8 +2,16 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  CartesianGrid,
 } from 'recharts';
+import Image from 'next/image';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -22,6 +30,7 @@ export default function Dashboard() {
     const { data, error } = await supabase
       .from('ad_insights')
       .select('date_start, spend, clicks, leads')
+      .gte('date_start', '2025-01-01')
       .order('date_start', { ascending: true });
 
     if (error) {
@@ -31,7 +40,6 @@ export default function Dashboard() {
     }
 
     const dailyData = {};
-
     data.forEach(({ date_start, spend, clicks, leads }) => {
       if (!dailyData[date_start]) {
         dailyData[date_start] = { date: date_start, spend: 0, clicks: 0, leads: 0 };
@@ -50,33 +58,38 @@ export default function Dashboard() {
     setLoading(false);
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_KEY
-  );
-
   return (
-    <div className="container mx-auto p-8">
-      <h1 className="text-2xl font-bold mb-6">📊 Ad Performance (7 Days)</h1>
+    <div className="bg-gray-900 text-white min-h-screen">
+      <div className="container mx-auto p-8">
+        <div className="flex justify-between items-center mb-8">
+          <Image src="/logo-sweti.png" width={200} height={60} alt="SWETI Marketing" />
+          <Image src="/logo-physiq.png" width={200} height={60} alt="Physiq Fitness" />
+        </div>
 
-      {loading ? (
-        <div className="text-gray-500">Loading your data...</div>
-      ) : (
-        <ResponsiveContainer width="100%" height={450}>
-          <BarChart
-            data={data}
-            margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
-          >
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Legend verticalAlign="top" />
-            <Bar dataKey="spend" fill="#4f46e5" name="Spend ($)" />
-            <Bar dataKey="clicks" fill="#10b981" name="Clicks" />
-            <Bar dataKey="leads" fill="#f59e0b" name="Leads" />
-          </BarChart>
-        </ResponsiveContainer>
-      )}
+        <h1 className="text-3xl font-bold mb-6" style={{ color: '#97c848' }}>
+          📊 Physiq Fitness Ad Performance (7 Days)
+        </h1>
+
+        {loading ? (
+          <div className="text-gray-400">Loading your data...</div>
+        ) : (
+          <ResponsiveContainer width="100%" height={450}>
+            <BarChart data={data} margin={{ top: 20, right: 20, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 12 }} />
+              <YAxis stroke="#9CA3AF" tick={{ fontSize: 12 }} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#111827', borderRadius: '8px' }}
+                labelStyle={{ color: '#F9FAFB' }}
+              />
+              <Legend verticalAlign="top" />
+              <Bar dataKey="spend" fill="#167cff" name="Spend ($)" /> {/* SWETI Blue */}
+              <Bar dataKey="clicks" fill="#97c848" name="Clicks" /> {/* Physiq Green */}
+              <Bar dataKey="leads" fill="#ffffff" name="Leads" /> {/* White */}
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
     </div>
   );
 }
